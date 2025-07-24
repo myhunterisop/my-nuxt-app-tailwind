@@ -2,32 +2,28 @@
   <svg
     v-if="svgContent"
     v-bind="svgAttrs"
-    :class="uiIcoClasses"
-    class="ui-ico"
+    :class="['ui-ico', uiIcoClasses]"
     v-html="svgInner"
     focusable="false"
     role="img"
-  />
+  ></svg>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watchEffect } from 'vue'
 
 const props = defineProps<{
-    name: string
-    dir?: 'up' | 'down' | 'left' | 'right'
-  }>()
+  name: string
+  dir?: 'up' | 'down' | 'left' | 'right'
+}>()
 
 const svgContent = ref<string | null>(null)
 const svgAttrs = ref<Record<string, string>>({})
 const svgInner = ref<string>('')
 
-const uiIcoClasses = computed(() => ({
-  'ui-ico--up': props.dir === 'up',
-  'ui-ico--right': props.dir === 'right',
-  'ui-ico--down': props.dir === 'down',
-  'ui-ico--left': props.dir === 'left',
-}))
+const uiIcoClasses = computed(() =>
+  props.dir ? `ui-ico--${props.dir}` : ''
+)
 
 watchEffect(async () => {
   if (!props.name) {
