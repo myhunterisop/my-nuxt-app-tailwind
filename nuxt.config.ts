@@ -9,11 +9,21 @@ export default defineNuxtConfig({
     port: 3000,
   },
   builder: 'vite',
+  modules: [
+    '@pinia/nuxt',
+  ],
   css: ['~/assets/css/main.css'],
+  app: {
+    head: {
+      htmlAttrs: {
+        lang: 'en'
+      }
+    }
+  },
   vite: {
     resolve: {
       alias: {
-        components: '/components',
+        '@components': '/components',
         '@images': '/public/images',
       },
     },
