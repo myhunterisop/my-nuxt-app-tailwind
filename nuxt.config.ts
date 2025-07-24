@@ -13,6 +13,7 @@ export default defineNuxtConfig({
   vite: {
     resolve: {
       alias: {
+        components: '/components',
         '@images': '/public/images',
       },
     },
