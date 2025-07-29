@@ -1,0 +1,17 @@
+.ui-ico {
+    display: inline-block;
+    vertical-align: middle;
+    width: 1em;
+    height: 1em;
+    fill: currentColor;
+
+    &--right{ transform: rotate(90deg);}
+    &--down { transform: rotate(180deg);}
+    &--left { transform: rotate(-90deg);}
+    &--is-loading {
+        border-radius: 50%;
+        border: 2px dashed currentColor;
+        border-bottom-color: transparent;
+        animation: spin 1s linear infinite;
+    }
+}
