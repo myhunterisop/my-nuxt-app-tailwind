@@ -6,9 +6,9 @@
           <span class="font-bold text-xl tracking-widest">LOGO</span>
         </div>
         <nav class="hidden md:flex gap-8 text-sm uppercase tracking-widest">
-          <a href="#" class="hover:text-blue-600 transition">Главная</a>
-          <a href="#" class="hover:text-blue-600 transition">О нас</a>
-          <a href="#" class="hover:text-blue-600 transition">Контакты</a>
+          <a href="/" class="hover:text-blue-600 transition">Главная</a>
+          <a href="/users" class="hover:text-blue-600 transition">Пользователи</a>
+          <a href="/posts" class="hover:text-blue-600 transition">Посты</a>
         </nav>
         <div class="flex items-center gap-3">
           <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Войти</button>

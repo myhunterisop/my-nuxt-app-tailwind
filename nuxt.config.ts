@@ -1,5 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from "@tailwindcss/vite";
+import { imagetools } from 'vite-imagetools'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
@@ -29,6 +30,7 @@ export default defineNuxtConfig({
     },
     plugins: [
       tailwindcss(),
+      imagetools(),
       {
         name: 'console-on-build',
         buildStart() {

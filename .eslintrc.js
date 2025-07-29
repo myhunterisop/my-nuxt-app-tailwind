@@ -17,15 +17,12 @@ module.exports = {
       sourceType: 'module',
     },
     rules: {
-      // Отключаем ошибку о default export для .vue файлов
       'import/no-default-export': 'off',
-      // Можно добавить свои правила
     },
     overrides: [
       {
         files: ['*.vue'],
         rules: {
-          // Отключаем ошибку о default export для .vue файлов
           '@typescript-eslint/no-var-requires': 'off',
         },
       },
