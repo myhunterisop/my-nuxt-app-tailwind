@@ -6,12 +6,10 @@ export function useApiData<T>(schema: z.ZodSchema<T>) {
   const data = ref<T[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
-  const isLoaded = ref(false)
 
   const fetchData = async (url: string) => {
     isLoading.value = true
     error.value = null
-    isLoaded.value = true
     try {
       const response = await $fetch<unknown[]>(url)
       data.value = z.array(schema).parse(response)
@@ -26,14 +24,12 @@ export function useApiData<T>(schema: z.ZodSchema<T>) {
   const reset = () => {
     data.value = []
     error.value = null
-    isLoaded.value = false
   }
 
   return {
     data,
     isLoading,
     error,
-    isLoaded,
     fetchData,
     reset
   }

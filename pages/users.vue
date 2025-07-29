@@ -16,7 +16,7 @@
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
         <p class="mt-2 text-gray-600">Загрузка пользователей...</p>
       </div>
-      <div v-else-if="error && isLoaded" class="text-center py-8">
+      <div v-else-if="error" class="text-center py-8">
         <div class="text-red-500 mb-2">
           <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
@@ -30,7 +30,7 @@
           Попробовать снова
         </button>
       </div>
-      <div v-else-if="users.length && isLoaded" class="space-y-4">
+      <div v-else-if="users.length" class="space-y-4">
         <div 
           v-for="user in users" 
           :key="user.id"
@@ -52,7 +52,7 @@
           </div>
         </div>
       </div>
-      <div v-else-if="isLoaded" class="text-center py-8 text-gray-500">
+      <div v-else class="text-center py-8 text-gray-500">
         Пользователи не найдены
       </div>
     </div>
@@ -75,7 +75,7 @@ type User = z.infer<typeof UserSchema>
 
 // Используем composables
 const { setPageSeo } = useSeo()
-const { data: users, isLoading, error, isLoaded, fetchData } = useApiData(UserSchema)
+const { data: users, isLoading, error, fetchData } = useApiData(UserSchema)
 
 // Устанавливаем SEO
 setPageSeo('Пользователи | MyApp', 'Список пользователей приложения MyApp')
