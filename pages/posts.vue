@@ -1,6 +1,6 @@
 <template>
   <div class="container mx-auto p-6">
-    <h1 class="text-3xl font-bold mb-6">Поиск и фильтрация постов</h1>
+    <h1 class="text-3xl font-bold mb-6 text-white">Поиск и фильтрация постов</h1>
     <div class="bg-white rounded-lg shadow-md p-6 mb-6">
       <div class="flex flex-col md:flex-row gap-4">
         <input

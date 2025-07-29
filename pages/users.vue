@@ -1,6 +1,6 @@
 <template>
   <div class="container mx-auto p-6">
-    <h1 class="text-3xl font-bold mb-6">Пользователи (jsonplaceholder)</h1>
+    <h1 class="text-3xl font-bold mb-6 text-white">Пользователи (jsonplaceholder)</h1>
     <div class="bg-white rounded-lg shadow-md p-6">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-xl font-semibold">Список пользователей</h2>
