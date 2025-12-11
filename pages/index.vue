@@ -4,7 +4,13 @@
             <h1 class="text-4xl font-bold text-center mb-8 text-white drop-shadow-lg">Добро пожаловать в Nuxt.js API Demo</h1>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                <div class="bg-white bg-opacity-90 backdrop-blur-md rounded-lg shadow-xl p-6 border border-white border-opacity-20">
+                <div class="bg-white bg-opacity-90 backdrop-blur-md rounded-lg shadow-xl p-6 border border-white border-opacity-20 space-y-2">
+                    <NuxtLink 
+                        to="/currency-calculator" 
+                        class="block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+                    >
+                        Калькулятор валют
+                    </NuxtLink>
                     <NuxtLink 
                         to="/styleguide" 
                         class="block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
@@ -24,6 +30,24 @@
                             class="block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
                         >
                             Пользователи
+                        </NuxtLink>
+                        <NuxtLink 
+                            to="/raidbots" 
+                            class="block bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+                        >
+                            Raidbots API
+                        </NuxtLink>
+                        <NuxtLink 
+                            to="/html-parser" 
+                            class="block bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 transition-colors"
+                        >
+                            HTML Parser
+                        </NuxtLink>
+                        <NuxtLink 
+                            to="/boss-summary" 
+                            class="block bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 transition-colors"
+                        >
+                            Boss Summary
                         </NuxtLink>
                     </div>
                 </div>
