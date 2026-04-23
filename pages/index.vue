@@ -17,6 +17,12 @@
                     >
                         Компоненты UI
                     </NuxtLink>
+                    <NuxtLink
+                        to="/horizontal-scroll-demo"
+                        class="block bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700 transition-colors"
+                    >
+                        Горизонтальный скролл (демо)
+                    </NuxtLink>
                 </div>
                 
                 <div class="bg-white bg-opacity-90 backdrop-blur-md rounded-lg shadow-xl p-6 border border-white border-opacity-20">
@@ -32,22 +38,10 @@
                             Пользователи
                         </NuxtLink>
                         <NuxtLink 
-                            to="/raidbots" 
-                            class="block bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+                            to="/raiderio-weekly" 
+                            class="block bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700 transition-colors"
                         >
-                            Raidbots API
-                        </NuxtLink>
-                        <NuxtLink 
-                            to="/html-parser" 
-                            class="block bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 transition-colors"
-                        >
-                            HTML Parser
-                        </NuxtLink>
-                        <NuxtLink 
-                            to="/boss-summary" 
-                            class="block bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 transition-colors"
-                        >
-                            Boss Summary
+                            Raider.IO Weekly Keys
                         </NuxtLink>
                     </div>
                 </div>

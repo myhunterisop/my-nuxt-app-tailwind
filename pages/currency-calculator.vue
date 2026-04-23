@@ -120,11 +120,11 @@ const rates = ref({
   rubToKgs: 1.075,
   eurToKgs: 102.0,
   usdToKgs: 87.5,
-  kztToKgs: 0.185,
+  kztToKgs: 0.2,
 })
 
 // Процентная надбавка (ввод пользователем)
-const percent = ref<number>(6)
+const percent = ref<number>(10)
 
 // Строки таблицы примеров
 const rows = ref<Array<{ name: string; kzt: number | null; usd: number | null; eur: number | null }>>([
@@ -149,16 +149,27 @@ const multiplier = computed(() => {
   return avg || 1
 })
 
-const targetRateKgs = computed(() => {
-  switch (currency.value) {
-    case 'EUR': return rates.value.eurToKgs
-    case 'USD': return rates.value.usdToKgs
-    case 'KZT': return rates.value.kztToKgs
-  }
-})
+/** KGS для суммы в USD/EUR: кросс через KZT (Бакай продажа USD/EUR и продажа KZT), затем KZT→KGS. */
+function kgsFromForeignToKgs(amt: number, foreignToKgs: number): number {
+  const kzt = rates.value.kztToKgs
+  if (!kzt || kzt <= 0) return 0
+  const kztPerUnit = foreignToKgs / kzt
+  return amt * kztPerUnit * kzt
+}
 
 const kgsNeeded = computed(() => {
-  return amount.value * targetRateKgs.value
+  const amt = amount.value
+  const r = rates.value
+  switch (currency.value) {
+    case 'KZT':
+      return amt * r.kztToKgs
+    case 'USD':
+      return kgsFromForeignToKgs(amt, r.usdToKgs)
+    case 'EUR':
+      return kgsFromForeignToKgs(amt, r.eurToKgs)
+    default:
+      return 0
+  }
 })
 
 const rubNeeded = computed(() => {
@@ -177,7 +188,7 @@ function reset() {
   amount.value = 50999
   currency.value = 'KZT'
   percent.value = 6
-  rates.value = { rubToKgs: 1.075, eurToKgs: 102.0, usdToKgs: 87.5, kztToKgs: 0.185 }
+  rates.value = { rubToKgs: 1.075, eurToKgs: 102.0, usdToKgs: 87.5, kztToKgs: 0.2 }
   rows.value = [ { name: 'Epic', kzt: null, usd: null, eur: null }, { name: 'Подписка 6 мес.', kzt: null, usd: null, eur: null } ]
 }
 function addRow() {
@@ -252,8 +263,8 @@ function convertToRub(value: number | null | undefined, cur: 'KZT'|'USD'|'EUR') 
   const v = Number(value)
   let kgs = 0
   if (cur === 'KZT') kgs = v * rates.value.kztToKgs
-  if (cur === 'USD') kgs = v * rates.value.usdToKgs
-  if (cur === 'EUR') kgs = v * rates.value.eurToKgs
+  if (cur === 'USD') kgs = kgsFromForeignToKgs(v, rates.value.usdToKgs)
+  if (cur === 'EUR') kgs = kgsFromForeignToKgs(v, rates.value.eurToKgs)
   const rub = kgs / rates.value.rubToKgs
   return rub
 }

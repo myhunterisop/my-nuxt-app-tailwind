@@ -5,29 +5,31 @@
     <div class="bg-white bg-opacity-90 backdrop-blur-md rounded-lg shadow-xl p-6 mb-6">
       <h2 class="text-xl font-semibold mb-4">Горизонтальный скролл с виртуализацией</h2>
       
-      <HorizontalScroller
-        ref="scrollerRef"
-        :items="items"
-        :item-size="250"
-        key-field="id"
-        :scroll-step="300"
-      >
-        <template #default="{ item, index }">
-          <div class="item-content">
-            <div class="item-header">
-              <h3 class="item-title">{{ item.title }}</h3>
-              <span class="item-index">#{{ index + 1 }}</span>
+      <div class="scroller-frame">
+        <HorizontalScroller
+          ref="scrollerRef"
+          :items="items"
+          :item-size="250"
+          key-field="id"
+          :scroll-step="300"
+        >
+          <template #default="{ item, index }">
+            <div class="item-content">
+              <div class="item-header">
+                <h3 class="item-title">{{ item.title }}</h3>
+                <span class="item-index">#{{ index + 1 }}</span>
+              </div>
+              <div class="item-body">
+                <p>{{ item.description }}</p>
+              </div>
+              <div class="item-footer">
+                <span class="item-category">{{ item.category }}</span>
+                <span class="item-date">{{ item.date }}</span>
+              </div>
             </div>
-            <div class="item-body">
-              <p>{{ item.description }}</p>
-            </div>
-            <div class="item-footer">
-              <span class="item-category">{{ item.category }}</span>
-              <span class="item-date">{{ item.date }}</span>
-            </div>
-          </div>
-        </template>
-      </HorizontalScroller>
+          </template>
+        </HorizontalScroller>
+      </div>
       
       <div class="mt-4 flex gap-2 flex-wrap">
         <button 
@@ -129,6 +131,12 @@ setPageSeo('Горизонтальный скролл | MyApp', 'Демонст�
 </script>
 
 <style scoped>
+.scroller-frame {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
 .item-content {
   height: 100%;
   display: flex;
