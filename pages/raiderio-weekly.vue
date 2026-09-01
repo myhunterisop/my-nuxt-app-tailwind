@@ -8,7 +8,9 @@
           <span class="font-semibold">{{ minKeysThreshold }}</span>
           ключей уровня
           <span class="font-semibold">{{ minKeyLevelThreshold }}+</span>
-          за текущую неделю.
+          за выбранный период (по умолчанию — с прошлой среды по сегодня, МСК).
+          Raider.IO не отдаёт полный лог: каждое поле — до 10 забегов, мы склеиваем
+          recent / weekly / previous week / highest / best и копим уникальные ключи в браузере при повторных обновлениях.
         </p>
         <div class="flex flex-wrap items-center gap-3">
           <button
@@ -48,6 +50,24 @@
               class="w-20 px-2 py-1 border border-gray-300 rounded-md text-sm"
             />
           </div>
+          <div class="flex items-center gap-2">
+            <label class="text-sm text-gray-700" for="period-from">С:</label>
+            <input
+              id="period-from"
+              v-model="periodFrom"
+              type="date"
+              class="px-2 py-1 border border-gray-300 rounded-md text-sm"
+            />
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-sm text-gray-700" for="period-to">По:</label>
+            <input
+              id="period-to"
+              v-model="periodTo"
+              type="date"
+              class="px-2 py-1 border border-gray-300 rounded-md text-sm"
+            />
+          </div>
         </div>
       </div>
 
@@ -77,7 +97,7 @@
             <tr>
               <th class="text-left px-3 py-2">Персонаж</th>
               <th class="text-left px-3 py-2">Реалм</th>
-              <th class="text-left px-3 py-2">Ключей за неделю</th>
+              <th class="text-left px-3 py-2">Ключей за период</th>
               <th class="text-left px-3 py-2">Ключей {{ minKeyLevelThreshold }}+</th>
               <th class="text-left px-3 py-2">Условие выполнено</th>
               <th class="text-left px-3 py-2">Действие</th>
@@ -132,7 +152,7 @@
                   <div v-else-if="row.error" class="text-red-600">{{ row.error }}</div>
                   <div v-else-if="row.result">
                     <details open>
-                      <summary class="cursor-pointer font-medium">Все попытки за неделю</summary>
+                      <summary class="cursor-pointer font-medium">Все попытки за период</summary>
                       <div class="mt-2 overflow-x-auto">
                         <table class="min-w-full text-xs">
                           <thead class="bg-white border-b">
@@ -154,7 +174,7 @@
                               <td class="px-2 py-1">{{ formatDate(run.completed_at) }}</td>
                             </tr>
                             <tr v-if="row.result.weeklyRuns.length === 0">
-                              <td colspan="4" class="px-2 py-2 text-gray-500">Нет попыток за текущий недельный период.</td>
+                              <td colspan="4" class="px-2 py-2 text-gray-500">Нет попыток за выбранный период.</td>
                             </tr>
                           </tbody>
                         </table>
@@ -170,7 +190,7 @@
       </div>
 
       <div class="bg-white rounded-lg shadow-md p-4 mt-4">
-        <div class="font-medium mb-3">Ответ Raider.IO: `mythic_plus_recent_runs`</div>
+        <div class="font-medium mb-3">Склеенные забеги Raider.IO (без полного лога)</div>
         <div class="space-y-3">
           <div
             v-for="(row, idx) in players"
@@ -215,11 +235,13 @@ type WeeklyResponse = {
   mythicPlusRecentRunsRaw: WeeklyRun[]
   source: string
   resetAt: string
+  periodEnd: string
   isSourceLimited: boolean
 }
 
 type WeeklyHistoryRecord = {
   resetAt: string
+  periodEnd: string
   weeklyRuns: WeeklyRun[]
 }
 
@@ -235,39 +257,29 @@ type PlayerRow = {
 }
 
 const defaultPlayers: PlayerRow[] = [
-  { name: 'Айарна', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
   { name: 'Вайзмэнион', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Вронгстайл', realm: 'Ревущий Фьорд', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Ксайксус', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Doubleflex', realm: 'Silvermoon', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Фенникс', realm: 'Пиратская Бухта', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Вакаримассен', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Авээцезарь', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Джаная', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Мистикдруид', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Риттервульф', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Депстока', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Баловалка', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Кампотнапот', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Onlyvoid', realm: 'Silvermoon', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Драништани', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Бумбашама', realm: 'Ревущий Фьорд', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Кеттерли', realm: 'Ревущий Фьорд', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Светлаябулка', realm: 'Ревущий Фьорд', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Ддаррк', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Далдринрога', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Аладинк', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Магкарок', realm: 'Ревущий Фьорд', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Джессамин', realm: 'Подземье', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Керреть', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Заснайпил', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Пинкфрост', realm: 'Ревущий Фьорд', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Бармалейка', realm: 'Черный Шрам', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Тацумии', realm: 'Ревущий Фьорд', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Каусаприма', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
   { name: 'Жеймсо', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
-  { name: 'Волкнемоо', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Пожирателесс', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Поппидрейтон', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Мистикхирос', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Керреть', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Эррей', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Авээцезарь', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Змеявочке', realm: 'Ревущий Фьорд', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Каусаприма', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
   { name: 'Анейда', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Фенникс', realm: 'Пиратская Бухта', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Мидаско', realm: 'Вечная песня', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Наттусик', realm: 'Свежеватель душ', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Чуббаака', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Магкарок', realm: 'Ревущий Фьорд', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Джаная', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Пинкфростх', realm: 'Ревущий Фьорд', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Несерчайн', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Шадовгрим', realm: 'Гордунни', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Бумбапала', realm: 'Ревущий Фьорд', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Омлетко', realm: 'Ревущий Фьорд', region: 'eu', loading: false, error: '', result: null },
+  { name: 'Elgwyn', realm: 'Kazzak', region: 'eu', loading: false, error: '', result: null },
 ].sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' })) as PlayerRow[]
 
 const players = ref<PlayerRow[]>(defaultPlayers.map((row) => ({ ...row })))
@@ -276,6 +288,37 @@ const error = ref('')
 const expandedRow = ref<number | null>(null)
 const minKeysThreshold = ref(8)
 const minKeyLevelThreshold = ref(10)
+const MSK_UTC_OFFSET_MS = 3 * 60 * 60 * 1000
+
+const toMskYmd = (date: Date) => {
+  const msk = new Date(date.getTime() + MSK_UTC_OFFSET_MS)
+  return msk.toISOString().slice(0, 10)
+}
+
+const getDefaultPeriodFrom = () => {
+  const now = new Date()
+  const nowMsk = new Date(now.getTime() + MSK_UTC_OFFSET_MS)
+  const startMsk = new Date(Date.UTC(
+    nowMsk.getUTCFullYear(),
+    nowMsk.getUTCMonth(),
+    nowMsk.getUTCDate(),
+    9,
+    0,
+    0,
+    0,
+  ))
+  const currentMskDay = startMsk.getUTCDay()
+  let diff = currentMskDay - 3
+  if (diff < 0) diff += 7
+  startMsk.setUTCDate(startMsk.getUTCDate() - diff)
+  if (nowMsk < startMsk) {
+    startMsk.setUTCDate(startMsk.getUTCDate() - 7)
+  }
+  return startMsk.toISOString().slice(0, 10)
+}
+
+const periodFrom = ref(getDefaultPeriodFrom())
+const periodTo = ref(toMskYmd(new Date()))
 
 const getCharacterHistoryKey = (row: PlayerRow) => {
   return `${row.region}:${row.realm.trim().toLowerCase()}:${row.name.trim().toLowerCase()}`
@@ -339,20 +382,28 @@ const loadOne = async (row: PlayerRow) => {
         region: row.region,
         realm: row.realm.trim(),
         name: row.name.trim(),
+        from: periodFrom.value,
+        to: periodTo.value,
       },
     }) as WeeklyResponse
 
-    // API отдаёт ограниченный recent window, поэтому на клиенте копим runs за текущую неделю
+    // API отдаёт ограниченный recent window, поэтому на клиенте копим runs за выбранный период
     const history = readWeeklyHistory()
     const characterKey = getCharacterHistoryKey(row)
     const cached = history[characterKey]
-    const isSameWeek = cached?.resetAt === data.resetAt
-    const cachedRuns = isSameWeek ? cached.weeklyRuns : []
-    const mergedWeeklyRuns = mergeWeeklyRuns(data.weeklyRuns, cachedRuns)
+    const isSamePeriod = cached?.resetAt === data.resetAt && cached?.periodEnd === data.periodEnd
+    const cachedRuns = isSamePeriod ? cached.weeklyRuns : []
+    const periodStartMs = new Date(data.resetAt).getTime()
+    const periodEndMs = new Date(data.periodEnd).getTime()
+    const mergedWeeklyRuns = mergeWeeklyRuns(data.weeklyRuns, cachedRuns).filter((run) => {
+      const completedAt = new Date(run.completed_at || 0).getTime()
+      return completedAt >= periodStartMs && completedAt <= periodEndMs
+    })
     const weeklyTenPlusCount = mergedWeeklyRuns.filter((run) => (run.mythic_level || 0) >= 10).length
 
     history[characterKey] = {
       resetAt: data.resetAt,
+      periodEnd: data.periodEnd,
       weeklyRuns: mergedWeeklyRuns,
     }
     writeWeeklyHistory(history)
@@ -373,6 +424,15 @@ const loadOne = async (row: PlayerRow) => {
 }
 
 const loadAllPlayers = async () => {
+  if (!periodFrom.value || !periodTo.value) {
+    error.value = 'Укажите даты начала и окончания периода'
+    return
+  }
+  if (periodFrom.value > periodTo.value) {
+    error.value = 'Дата начала не может быть позже даты окончания'
+    return
+  }
+
   loading.value = true
   error.value = ''
   try {
