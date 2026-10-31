@@ -1,7 +1,8 @@
 <template>
   <span
     v-if="isLoading"
-    class="ui-ico ui-ico--is-loading"
+    :class="['ui-ico', 'ui-ico--is-loading', uiIcoClasses]"
+    aria-hidden="true"
   />
   <svg
     v-else
@@ -9,12 +10,13 @@
     :class="['ui-ico', uiIcoClasses]"
     focusable="false"
     role="img"
+    aria-hidden="true"
     v-html="svgInner"
-  ></svg>
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
   name: string
@@ -22,45 +24,60 @@ const props = defineProps<{
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
 }>()
 
-const uiIcoClasses = computed(() => {
-  const classes = []
-  if (props.dir) classes.push(`ui-ico--${props.dir}`)
-  if (props.size) classes.push(`ui-ico--size-${props.size}`)
-  return classes.join(' ')
-})
+const uiIcoClasses = computed(() => [
+  props.dir ? `ui-ico--${props.dir}` : '',
+  props.size ? `ui-ico--size-${props.size}` : '',
+])
 
-const svgInner = ref<string>('')
-const isLoading = ref(false)
+const svgInner = ref('')
+const viewBox = ref('0 0 16 16')
+const isLoading = ref(Boolean(props.name))
 
+let loadId = 0
+
+const parseSvg = (raw: string) => {
+  const viewBoxMatch = raw.match(/viewBox=["']([^"']+)["']/i)
+  const innerMatch = raw.match(/<svg[^>]*>([\s\S]*)<\/svg>/i)
+  return {
+    viewBox: viewBoxMatch?.[1] ?? '0 0 16 16',
+    inner: innerMatch?.[1]?.trim() ?? '',
+  }
+}
+
+const isSafeIconName = (name: string) => /^[a-z0-9_-]+$/i.test(name)
+
+// watch, а не onMounted: name может смениться на живом инстансе (список, тоггл).
+// immediate: true грузит ещё на setup, до mount — отдельный onMounted дублировал бы первый запрос.
 watch(
   () => props.name,
-  async (newName) => {
-    if (!newName) {
+  async (name) => {
+    const currentLoadId = ++loadId
+
+    if (!name || !isSafeIconName(name)) {
       svgInner.value = ''
+      viewBox.value = '0 0 16 16'
       isLoading.value = false
       return
     }
+
     isLoading.value = true
+
     try {
-      const raw = (await import(`~/assets/icons/${newName}.svg?raw`)).default as string
-      // Извлекаем только содержимое между тегами <svg> и </svg>
-      const contentMatch = raw.match(/<svg[^>]*>(.*?)<\/svg>/s)
-      svgInner.value = contentMatch ? contentMatch[1] : ''
+      const raw = (await import(`~/assets/icons/${name}.svg?raw`)).default as string
+      if (currentLoadId !== loadId) return
+      const parsed = parseSvg(raw)
+      svgInner.value = parsed.inner
+      viewBox.value = parsed.viewBox
     } catch {
+      if (currentLoadId !== loadId) return
       svgInner.value = ''
+      viewBox.value = '0 0 16 16'
     } finally {
-      isLoading.value = false
+      if (currentLoadId === loadId) isLoading.value = false
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
-
-function extractViewBox(svgString?: string) {
-  if (!svgString) return '0 0 16 16'
-  const match = svgString.match(/viewBox="([^"]+)"/i)
-  return match ? match[1] : '0 0 16 16'
-}
-const viewBox = computed(() => extractViewBox(svgInner.value))
 </script>
 
 <style lang="scss" scoped>
