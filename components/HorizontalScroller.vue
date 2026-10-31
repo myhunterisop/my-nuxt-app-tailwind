@@ -1,37 +1,66 @@
 <template>
-  <div class="horizontal-scroller-container">
-    <RecycleScroller
-      ref="scrollerRef"
-      class="scroller"
-      :items="items"
-      :item-size="itemSize"
-      :buffer="200"
-      direction="horizontal"
-      :key-field="keyField"
-      v-slot="{ item, index }"
+  <div
+    class="horizontal-scroller"
+    tabindex="0"
+    @keydown="onKeydown"
+  >
+    <ClientOnly>
+      <RecycleScroller
+        ref="scrollerRef"
+        class="horizontal-scroller__track"
+        :class="{ 'is-dragging': isDragging }"
+        :style="{ height: `${height}px` }"
+        :items="items"
+        :item-size="itemSize"
+        :buffer="buffer"
+        direction="horizontal"
+        :key-field="keyField"
+        emit-update
+        @scroll="updateScrollState"
+        @update="onUpdate"
+        @visible="updateScrollState"
+        @resize="updateScrollState"
+        v-slot="{ item, index }"
+      >
+        <div
+          class="horizontal-scroller__item"
+          :style="{ width: `${itemSize}px` }"
+        >
+          <slot :item="item" :index="index">
+            <div class="horizontal-scroller__fallback">
+              {{ fallbackLabel(item, index) }}
+            </div>
+          </slot>
+        </div>
+      </RecycleScroller>
+
+      <template #fallback>
+        <div
+          class="horizontal-scroller__track"
+          :style="{ height: `${height}px` }"
+        />
+      </template>
+    </ClientOnly>
+
+    <div
+      v-if="showNav"
+      class="horizontal-scroller__nav"
     >
-      <div class="item" :style="{ width: itemSize + 'px' }">
-        <slot :item="item" :index="index">
-          <div class="default-item">
-            {{ item.title || item.name || `Item ${index}` }}
-          </div>
-        </slot>
-      </div>
-    </RecycleScroller>
-    
-    <!-- Навигационные кнопки -->
-    <div class="navigation">
-      <button 
-        @click="scrollLeft" 
+      <button
+        type="button"
+        class="horizontal-scroller__nav-btn horizontal-scroller__nav-btn--left"
         :disabled="!canScrollLeft"
-        class="nav-button left"
+        aria-label="Прокрутить влево"
+        @click="scrollLeft"
       >
         ←
       </button>
-      <button 
-        @click="scrollRight" 
+      <button
+        type="button"
+        class="horizontal-scroller__nav-btn horizontal-scroller__nav-btn--right"
         :disabled="!canScrollRight"
-        class="nav-button right"
+        aria-label="Прокрутить вправо"
+        @click="scrollRight"
       >
         →
       </button>
@@ -40,270 +69,394 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { useEventListener } from '@vueuse/core'
 import { RecycleScroller } from 'vue-virtual-scroller'
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
+import type { RecycleScrollerExposed } from 'vue-virtual-scroller'
 
-interface Props {
-  items: any[]
+type ScrollerItem = Record<string, unknown>
+
+type RecycleScrollerInst = RecycleScrollerExposed<ScrollerItem> & {
+  $el?: HTMLElement
+}
+
+const props = withDefaults(defineProps<{
+  items: ScrollerItem[]
   itemSize?: number
   keyField?: string
   scrollStep?: number
-}
-
-const props = withDefaults(defineProps<Props>(), {
+  height?: number
+  buffer?: number
+  showNav?: boolean
+  draggable?: boolean
+  inertia?: boolean
+}>(), {
   itemSize: 200,
   keyField: 'id',
-  scrollStep: 300
+  scrollStep: 300,
+  height: 200,
+  buffer: 200,
+  showNav: true,
+  draggable: true,
+  inertia: true,
 })
 
-const scrollerRef = ref()
+const emit = defineEmits<{
+  range: [payload: { start: number, end: number, total: number }]
+}>()
+
+const scrollerRef = ref<RecycleScrollerInst | null>(null)
 const canScrollLeft = ref(false)
 const canScrollRight = ref(false)
+const isDragging = ref(false)
 
-// Проверяем возможность скролла
-const updateScrollState = () => {
-  if (!scrollerRef.value) return
-  
-  const scrollElement = scrollerRef.value.$el
-  if (!scrollElement) return
-  
-  canScrollLeft.value = scrollElement.scrollLeft > 0
-  canScrollRight.value = scrollElement.scrollLeft < (scrollElement.scrollWidth - scrollElement.clientWidth)
+let dragStartX = 0
+let dragStartScroll = 0
+let dragMoved = false
+let inertiaFrame = 0
+let inertiaVelocity = 0
+let inertiaLastTime = 0
+let inertiaScroll = 0
+const velocitySamples: Array<{ t: number, x: number }> = []
+
+const INERTIA_FRICTION = 0.0022
+const INERTIA_MIN_VELOCITY = 0.006
+const INERTIA_MAX_VELOCITY = 2.4
+const VELOCITY_WINDOW_MS = 80
+const EDGE_SOFT_PX = 140
+
+const resetVelocitySamples = () => {
+  velocitySamples.length = 0
 }
 
-// Функции скролла
-const scrollLeft = () => {
-  if (!scrollerRef.value) return
-  
-  const scrollElement = scrollerRef.value.$el
-  if (!scrollElement) return
-  
-  scrollElement.scrollBy({
-    left: -props.scrollStep,
-    behavior: 'smooth'
-  })
-}
-
-const scrollRight = () => {
-  if (!scrollerRef.value) return
-  
-  const scrollElement = scrollerRef.value.$el
-  if (!scrollElement) return
-  
-  scrollElement.scrollBy({
-    left: props.scrollStep,
-    behavior: 'smooth'
-  })
-}
-
-// Обработка колеса мыши для горизонтального скролла
-const handleWheel = (event: WheelEvent) => {
-  if (!scrollerRef.value) return
-  
-  const scrollElement = scrollerRef.value.$el
-  if (!scrollElement) return
-  
-  // Предотвращаем вертикальный скролл страницы
-  event.preventDefault()
-  
-  // Применяем горизонтальный скролл
-  scrollElement.scrollBy({
-    left: event.deltaY,
-    behavior: 'auto'
-  })
-}
-
-// Обработка клавиатуры
-const handleKeydown = (event: KeyboardEvent) => {
-  if (!scrollerRef.value) return
-  
-  switch (event.key) {
-    case 'ArrowLeft':
-      event.preventDefault()
-      scrollLeft()
-      break
-    case 'ArrowRight':
-      event.preventDefault()
-      scrollRight()
-      break
+const pushVelocitySample = (x: number) => {
+  const t = performance.now()
+  velocitySamples.push({ t, x })
+  const cutoff = t - VELOCITY_WINDOW_MS
+  while (velocitySamples.length > 1 && velocitySamples[0].t < cutoff) {
+    velocitySamples.shift()
   }
 }
 
-onMounted(async () => {
-  await nextTick()
-  
-  if (scrollerRef.value?.$el) {
-    const scrollElement = scrollerRef.value.$el
-    
-    // Добавляем обработчики событий
-    scrollElement.addEventListener('scroll', updateScrollState)
-    scrollElement.addEventListener('wheel', handleWheel, { passive: false })
-    document.addEventListener('keydown', handleKeydown)
-    
-    // Инициализируем состояние скролла
+const samplePointerVelocity = () => {
+  if (velocitySamples.length < 2) return 0
+  const first = velocitySamples[0]
+  const last = velocitySamples[velocitySamples.length - 1]
+  const dt = last.t - first.t
+  if (dt <= 0) return 0
+  const velocity = (last.x - first.x) / dt
+  return Math.max(-INERTIA_MAX_VELOCITY, Math.min(INERTIA_MAX_VELOCITY, velocity))
+}
+
+const trackEl = computed<HTMLElement | null>(() => {
+  const inst = scrollerRef.value
+  if (!inst) return null
+  if (inst.el && 'value' in inst.el) return inst.el.value ?? inst.$el ?? null
+  return inst.$el ?? null
+})
+
+const getTrackEl = () => trackEl.value
+
+const stopInertia = () => {
+  if (inertiaFrame) {
+    cancelAnimationFrame(inertiaFrame)
+    inertiaFrame = 0
+  }
+  inertiaVelocity = 0
+}
+
+const clampScroll = (el: HTMLElement, next: number) => {
+  const max = Math.max(0, el.scrollWidth - el.clientWidth)
+  return Math.min(max, Math.max(0, next))
+}
+
+const tickInertia = (time: number) => {
+  const el = getTrackEl()
+  if (!el || !props.inertia) {
+    stopInertia()
+    return
+  }
+
+  const rawDt = time - inertiaLastTime
+  inertiaLastTime = time
+  if (rawDt <= 0 || rawDt > 48) {
+    inertiaFrame = requestAnimationFrame(tickInertia)
+    return
+  }
+  const dt = rawDt
+  const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth)
+  const remaining = inertiaVelocity > 0
+    ? maxScroll - inertiaScroll
+    : inertiaScroll
+
+  if (remaining < EDGE_SOFT_PX && remaining >= 0) {
+    const maxEdgeVelocity = remaining * 0.012
+    if (Math.abs(inertiaVelocity) > maxEdgeVelocity) {
+      inertiaVelocity = Math.sign(inertiaVelocity) * maxEdgeVelocity
+    }
+  }
+
+  inertiaVelocity *= Math.exp(-INERTIA_FRICTION * dt)
+  inertiaScroll += inertiaVelocity * dt
+  inertiaScroll = clampScroll(el, inertiaScroll)
+  el.scrollLeft = inertiaScroll
+
+  const remainingAfter = inertiaVelocity > 0
+    ? maxScroll - inertiaScroll
+    : inertiaScroll
+  const settled = Math.abs(inertiaVelocity) < INERTIA_MIN_VELOCITY || remainingAfter <= 0.35
+  if (settled) {
+    stopInertia()
     updateScrollState()
+    return
   }
-})
 
-onUnmounted(() => {
-  if (scrollerRef.value?.$el) {
-    const scrollElement = scrollerRef.value.$el
-    scrollElement.removeEventListener('scroll', updateScrollState)
-    scrollElement.removeEventListener('wheel', handleWheel)
-  }
-  document.removeEventListener('keydown', handleKeydown)
-})
+  inertiaFrame = requestAnimationFrame(tickInertia)
+}
 
-// Публичные методы для внешнего использования
+const startInertia = (pointerVelocity: number) => {
+  const el = getTrackEl()
+  stopInertia()
+  if (!el || !props.inertia || Math.abs(pointerVelocity) < INERTIA_MIN_VELOCITY) return
+  inertiaVelocity = -pointerVelocity
+  inertiaScroll = el.scrollLeft
+  inertiaLastTime = performance.now()
+  inertiaFrame = requestAnimationFrame(tickInertia)
+}
+
+const updateScrollState = () => {
+  const el = getTrackEl()
+  if (!el) return
+  canScrollLeft.value = el.scrollLeft > 1
+  canScrollRight.value = el.scrollLeft < el.scrollWidth - el.clientWidth - 1
+}
+
+const scrollBy = (delta: number) => {
+  stopInertia()
+  getTrackEl()?.scrollBy({ left: delta, behavior: 'smooth' })
+  window.setTimeout(updateScrollState, 50)
+}
+
+const scrollLeft = () => scrollBy(-props.scrollStep)
+const scrollRight = () => scrollBy(props.scrollStep)
+
 const scrollToItem = (index: number) => {
-  if (!scrollerRef.value) return
-  
-  const scrollElement = scrollerRef.value.$el
-  if (!scrollElement) return
-  
-  const scrollLeft = index * props.itemSize
-  scrollElement.scrollTo({
-    left: scrollLeft,
-    behavior: 'smooth'
-  })
+  scrollerRef.value?.scrollToItem(index, { smooth: true })
 }
 
 const scrollToStart = () => {
-  if (!scrollerRef.value) return
-  
-  const scrollElement = scrollerRef.value.$el
-  if (!scrollElement) return
-  
-  scrollElement.scrollTo({
-    left: 0,
-    behavior: 'smooth'
-  })
+  scrollerRef.value?.scrollToPosition(0, { smooth: true })
 }
 
 const scrollToEnd = () => {
-  if (!scrollerRef.value) return
-  
-  const scrollElement = scrollerRef.value.$el
-  if (!scrollElement) return
-  
-  scrollElement.scrollTo({
-    left: scrollElement.scrollWidth,
-    behavior: 'smooth'
-  })
+  const last = props.items.length - 1
+  if (last >= 0) scrollerRef.value?.scrollToItem(last, { smooth: true, align: 'end' })
 }
 
-// Экспортируем методы для родительского компонента
+const isInteractiveTarget = (target: EventTarget | null) => {
+  return target instanceof Element
+    && Boolean(target.closest('button, a, input, textarea, select, label'))
+}
+
+const onPointerDown = (event: PointerEvent) => {
+  if (!props.draggable || event.button !== 0 || isInteractiveTarget(event.target)) return
+  const el = getTrackEl()
+  if (!el) return
+
+  stopInertia()
+  isDragging.value = true
+  dragMoved = false
+  dragStartX = event.clientX
+  dragStartScroll = el.scrollLeft
+  resetVelocitySamples()
+  pushVelocitySample(event.clientX)
+  try {
+    el.setPointerCapture(event.pointerId)
+  } catch {
+    // pointer capture недоступен для неtrusted-событий
+  }
+}
+
+const onPointerMove = (event: PointerEvent) => {
+  if (!isDragging.value) return
+  const el = getTrackEl()
+  if (!el) return
+
+  pushVelocitySample(event.clientX)
+
+  const delta = event.clientX - dragStartX
+  if (Math.abs(delta) > 3) dragMoved = true
+  el.scrollLeft = dragStartScroll - delta
+}
+
+const onPointerUp = (event: PointerEvent) => {
+  if (!isDragging.value) return
+  const el = getTrackEl()
+  isDragging.value = false
+  try {
+    if (el?.hasPointerCapture(event.pointerId)) el.releasePointerCapture(event.pointerId)
+  } catch {
+    // ignore
+  }
+  startInertia(samplePointerVelocity())
+  updateScrollState()
+}
+
+const onDragClickCapture = (event: MouseEvent) => {
+  if (!dragMoved) return
+  event.preventDefault()
+  event.stopPropagation()
+  dragMoved = false
+}
+
+const onWheel = (event: WheelEvent) => {
+  const el = getTrackEl()
+  if (!el) return
+  stopInertia()
+  if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return
+
+  const atStart = el.scrollLeft <= 0
+  const atEnd = el.scrollLeft >= el.scrollWidth - el.clientWidth - 1
+  if ((event.deltaY < 0 && atStart) || (event.deltaY > 0 && atEnd)) return
+
+  event.preventDefault()
+  el.scrollLeft += event.deltaY
+}
+
+const onKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault()
+    scrollLeft()
+  }
+  if (event.key === 'ArrowRight') {
+    event.preventDefault()
+    scrollRight()
+  }
+}
+
+const fallbackLabel = (item: ScrollerItem, index: number) => {
+  const title = item.title ?? item.name
+  return typeof title === 'string' ? title : `Item ${index}`
+}
+
+const onUpdate = (start: number, end: number) => {
+  emit('range', { start, end, total: props.items.length })
+  updateScrollState()
+}
+
+useEventListener(trackEl, 'scroll', updateScrollState, { passive: true })
+useEventListener(trackEl, 'wheel', onWheel, { passive: false })
+useEventListener(trackEl, 'pointerdown', onPointerDown)
+useEventListener(trackEl, 'pointermove', onPointerMove)
+useEventListener(trackEl, 'pointerup', onPointerUp)
+useEventListener(trackEl, 'pointercancel', onPointerUp)
+useEventListener(trackEl, 'click', onDragClickCapture, { capture: true })
+useEventListener(trackEl, 'dragstart', (event) => event.preventDefault())
+
+onMounted(async () => {
+  await nextTick()
+  updateScrollState()
+})
+
+onUnmounted(() => {
+  stopInertia()
+})
+
 defineExpose({
   scrollToItem,
   scrollToStart,
   scrollToEnd,
   scrollLeft,
-  scrollRight
+  scrollRight,
 })
 </script>
 
 <style scoped>
-.horizontal-scroller-container {
+.horizontal-scroller {
   position: relative;
   width: 100%;
+  min-width: 0;
+  outline: none;
 }
 
-.scroller {
+.horizontal-scroller__track {
   width: 100%;
-  height: 200px; /* Задайте нужную высоту */
   overflow-x: auto;
   overflow-y: hidden;
-  scroll-behavior: smooth;
+  cursor: grab;
+  user-select: none;
+  scroll-behavior: auto;
 }
 
-.scroller::-webkit-scrollbar {
+.horizontal-scroller__track.is-dragging {
+  cursor: grabbing;
+}
+
+.horizontal-scroller__track::-webkit-scrollbar {
   height: 8px;
 }
 
-.scroller::-webkit-scrollbar-track {
+.horizontal-scroller__track::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 4px;
 }
 
-.scroller::-webkit-scrollbar-thumb {
+.horizontal-scroller__track::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 4px;
 }
 
-.scroller::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-.item {
-  display: inline-block;
+.horizontal-scroller__item {
   height: 100%;
   flex-shrink: 0;
-  padding: 16px;
   box-sizing: border-box;
 }
 
-.default-item {
+.horizontal-scroller__fallback {
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 0 8px;
   background: #f5f5f5;
   border: 1px solid #ddd;
   border-radius: 8px;
-  font-weight: 500;
 }
 
-.navigation {
+.horizontal-scroller__nav {
   position: absolute;
   top: 50%;
-  transform: translateY(-50%);
-  width: 100%;
+  left: 0;
+  right: 0;
   display: flex;
   justify-content: space-between;
+  padding: 0 10px;
+  transform: translateY(-50%);
   pointer-events: none;
   z-index: 10;
 }
 
-.nav-button {
+.horizontal-scroller__nav-btn {
   pointer-events: auto;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
   border: none;
+  border-radius: 50%;
   background: rgba(0, 0, 0, 0.7);
-  color: white;
+  color: #fff;
   font-size: 18px;
-  font-weight: bold;
   cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.nav-button:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.9);
-  transform: scale(1.1);
-}
-
-.nav-button:disabled {
+.horizontal-scroller__nav-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
 }
 
-.nav-button.left {
-  margin-left: 10px;
-}
-
-.nav-button.right {
-  margin-right: 10px;
-}
-
-/* Скрываем кнопки на мобильных устройствах */
 @media (max-width: 768px) {
-  .navigation {
+  .horizontal-scroller__nav {
     display: none;
   }
 }
 </style>
-

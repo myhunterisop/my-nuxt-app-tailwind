@@ -181,6 +181,50 @@
       </div>
     </section>
 
+    <!-- HorizontalScroller -->
+    <section class="mb-12">
+      <h2 class="text-3xl font-semibold mb-6">HorizontalScroller</h2>
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <p class="text-gray-600 mb-4">
+          Горизонтальный слайдер на RecycleScroller: в DOM только карточки в вьюпорте плюс buffer.
+          Сейчас видимый диапазон
+          <span class="font-semibold">{{ scrollerRange.start }}–{{ scrollerRange.end }}</span>
+          из {{ scrollerItems.length }}.
+        </p>
+        <HorizontalScroller
+          :items="scrollerItems"
+          :item-size="220"
+          :height="176"
+          :scroll-step="220"
+          key-field="id"
+          @range="scrollerRange = $event"
+        >
+          <template #default="{ item, index }">
+            <div class="h-full mx-2 rounded-xl bg-slate-800 text-white p-4 flex flex-col justify-between">
+              <div class="flex justify-between items-start gap-2">
+                <span class="font-semibold">{{ item.title }}</span>
+                <span class="text-xs bg-white/20 rounded-full px-2 py-0.5">#{{ index + 1 }}</span>
+              </div>
+              <p class="text-sm text-white/80">{{ item.description }}</p>
+            </div>
+          </template>
+        </HorizontalScroller>
+        <div class="bg-gray-50 p-4 rounded-md mt-6">
+          <h4 class="font-medium mb-2">Props:</h4>
+          <ul class="text-sm space-y-1">
+            <li><code class="bg-gray-200 px-1 rounded">items</code> — массив карточек (нужен уникальный keyField)</li>
+            <li><code class="bg-gray-200 px-1 rounded">item-size</code> — ширина одной карточки в px</li>
+            <li><code class="bg-gray-200 px-1 rounded">height</code> — высота трека, без неё виртуализация ломается</li>
+            <li><code class="bg-gray-200 px-1 rounded">buffer</code> — запас px за краем экрана, чтобы не мигало при скролле</li>
+            <li><code class="bg-gray-200 px-1 rounded">scroll-step</code> — шаг стрелок</li>
+            <li><code class="bg-gray-200 px-1 rounded">show-nav</code> — стрелки поверх трека</li>
+            <li><code class="bg-gray-200 px-1 rounded">draggable</code> — скролл зажатой ЛКМ (по умолчанию включён)</li>
+            <li><code class="bg-gray-200 px-1 rounded">inertia</code> — докат после отпускания ЛКМ</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
     <!-- Информация о компонентах -->
     <section class="mb-12">
       <h2 class="text-3xl font-semibold mb-6">Информация</h2>
@@ -213,12 +257,19 @@
             </ul>
           </div>
         </div>
+        <div class="mt-8">
+          <h3 class="text-xl font-medium mb-4">HorizontalScroller</h3>
+          <p class="text-gray-600 mb-2">
+            Виртуальный горизонтальный слайдер: RecycleScroller рисует только видимые элементы.
+          </p>
+        </div>
       </div>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useSeoStore } from '~/stores/seo'
 
 const seo = useSeoStore()
@@ -266,4 +317,12 @@ const imgMeta2 = {
     ]
   }
 }
+
+const scrollerItems = Array.from({ length: 40 }, (_, index) => ({
+  id: index + 1,
+  title: `Карточка ${index + 1}`,
+  description: 'В DOM нет всех 40 сразу — только видимые плюс buffer.',
+}))
+
+const scrollerRange = ref({ start: 0, end: 0, total: scrollerItems.length })
 </script> 

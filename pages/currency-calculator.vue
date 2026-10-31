@@ -117,10 +117,10 @@ const currency = ref<'EUR'|'USD'|'KZT'>('KZT')
 
 const rates = ref({
   // исходные курсы, можно менять в UI
-  rubToKgs: 1.075,
-  eurToKgs: 102.0,
+  rubToKgs: 1.02,
+  eurToKgs: 97.7,
   usdToKgs: 87.5,
-  kztToKgs: 0.2,
+  kztToKgs: 0.205,
 })
 
 // Процентная надбавка (ввод пользователем)
