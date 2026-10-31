@@ -23,6 +23,12 @@
                     >
                         Горизонтальный скролл (демо)
                     </NuxtLink>
+                    <NuxtLink
+                        to="/learn-js"
+                        class="block bg-amber-600 text-white px-4 py-2 rounded hover:bg-amber-700 transition-colors"
+                    >
+                        Учим JS
+                    </NuxtLink>
                 </div>
                 
                 <div class="bg-white bg-opacity-90 backdrop-blur-md rounded-lg shadow-xl p-6 border border-white border-opacity-20">
