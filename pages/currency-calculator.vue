@@ -4,47 +4,76 @@
 
     <div class="grid gap-4">
       <div class="flex gap-3 items-center">
-        <label class="w-36">Сумма покупки</label>
-        <input v-model.number="amount" type="number" step="0.01" class="input rounded p-2 border flex-1" />
-        <select v-model="currency" class="p-2 border rounded">
-          <option value="EUR">EUR</option>
-          <option value="USD">USD</option>
-          <option value="KZT">KZT</option>
+        <label class="w-36" for="purchase-amount">Сумма покупки</label>
+        <input
+          id="purchase-amount"
+          v-model.number="amount"
+          type="number"
+          min="0"
+          step="0.01"
+          class="input rounded p-2 border flex-1"
+        />
+        <select v-model="currency" class="p-2 border rounded bg-white">
+          <option v-for="code in FOREIGN_CURRENCIES" :key="code" :value="code">
+            {{ code }}
+          </option>
         </select>
       </div>
 
       <div class="flex gap-3 items-center">
-        <label class="w-36">Процент комиссии</label>
-        <input v-model.number="percent" type="number" step="1" class="input rounded p-2 border w-32" />
+        <label class="w-36" for="commission-percent">Процент комиссии</label>
+        <input
+          id="commission-percent"
+          v-model.number="percent"
+          type="number"
+          min="0"
+          step="1"
+          class="input rounded p-2 border w-32"
+        />
       </div>
 
       <details open class="p-3 border rounded bg-gray-50">
         <summary class="cursor-pointer font-medium">Курсы (можно изменить)</summary>
         <div class="mt-3 grid grid-cols-2 gap-3">
-          <label class="flex items-center gap-2">1 RUB = <input v-model.number="rates.rubToKgs" type="number" step="0.0001" class="input p-1 border rounded w-28" /> KGS (смотри Бакай покупка RUB)</label>
-          <label class="flex items-center gap-2">1 EUR = <input v-model.number="rates.eurToKgs" type="number" step="0.01" class="input p-1 border rounded w-28" /> KGS (смотри Бакай продажа EUR)</label>
-          <label class="flex items-center gap-2">1 USD = <input v-model.number="rates.usdToKgs" type="number" step="0.01" class="input p-1 border rounded w-28" /> KGS (смотри Бакай продажа USD)</label>
-          <label class="flex items-center gap-2">1 KZT = <input v-model.number="rates.kztToKgs" type="number" step="0.0001" class="input p-1 border rounded w-28" /> KGS (смотри Бакай продажа KZT)</label>
+          <label class="flex items-center gap-2">
+            1 RUB =
+            <input v-model.number="rates.rubToKgs" type="number" step="0.0001" class="input p-1 border rounded w-28" />
+            KGS (Бакай, покупка RUB)
+          </label>
+          <label class="flex items-center gap-2">
+            1 EUR =
+            <input v-model.number="rates.eurToKgs" type="number" step="0.01" class="input p-1 border rounded w-28" />
+            KGS (Бакай, продажа EUR)
+          </label>
+          <label class="flex items-center gap-2">
+            1 USD =
+            <input v-model.number="rates.usdToKgs" type="number" step="0.01" class="input p-1 border rounded w-28" />
+            KGS (Бакай, продажа USD)
+          </label>
+          <label class="flex items-center gap-2">
+            1 KZT =
+            <input v-model.number="rates.kztToKgs" type="number" step="0.0001" class="input p-1 border rounded w-28" />
+            KGS (Бакай, продажа KZT)
+          </label>
         </div>
       </details>
 
       <div class="p-3 border rounded">
         <div class="mb-2">Расчёт:</div>
         <div class="grid grid-cols-1 gap-2">
-          <div>- Нужный KGS: <strong>{{ kgsNeededDisplay }}</strong></div>
-          <div>- Нужный RUB (фактический): <strong>{{ rubNeededDisplay }}</strong></div>
-          <div>- Нужный RUB (с учётом наблюдаемой поправки): <strong>{{ rubNeededWithSurchargeDisplay }}</strong></div>
-          <div>- Нужный RUB (с учётом введённого %): <strong>{{ rubNeededWithPercentDisplay }}</strong></div>
+          <div>- Нужный KGS: <strong>{{ formatMoney(kgsNeeded, 'KGS') }}</strong></div>
+          <div>- Нужный RUB (фактический): <strong>{{ formatMoney(rubNeeded, 'RUB') }}</strong></div>
+          <div>- Нужный RUB (с наблюдаемой поправкой): <strong>{{ formatMoney(rubNeededWithSurcharge, 'RUB') }}</strong></div>
+          <div>- Нужный RUB (с введённым %): <strong>{{ formatMoney(rubNeededWithPercent, 'RUB') }}</strong></div>
         </div>
       </div>
 
-      <!-- Таблица примеров покупок -->
-      <div class="p-3 border rounded bg-white">
+      <div class="p-3 border rounded bg-white overflow-x-auto">
         <div class="flex items-center justify-between mb-2">
           <div class="font-medium">Примеры покупок</div>
-          <div>
-            <button @click="addRow" class="px-3 py-1 bg-green-600 text-white rounded text-sm">Добавить пример</button>
-          </div>
+          <button type="button" class="px-3 py-1 bg-green-600 text-white rounded text-sm" @click="addRow">
+            Добавить пример
+          </button>
         </div>
         <table class="w-full text-sm">
           <thead>
@@ -57,21 +86,43 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(row, i) in rows" :key="i" class="border-t">
+            <tr v-for="row in rows" :key="row.id" class="border-t">
               <td class="py-2">
                 <div class="flex items-center gap-2">
                   <input v-model="row.name" class="p-1 border rounded w-40" />
-                  <button v-if="rows.length > 1" @click="removeRow(i)" class="text-sm text-red-600 px-2 py-1">Удалить</button>
+                  <button
+                    v-if="rows.length > 1"
+                    type="button"
+                    class="text-sm text-red-600 px-2 py-1"
+                    @click="removeRow(row.id)"
+                  >
+                    Удалить
+                  </button>
                 </div>
               </td>
-              <td class="py-2"><input v-model.number="row.kzt" type="number" step="0.01" class="p-1 border rounded w-28"/></td>
-              <td class="py-2"><input v-model.number="row.usd" type="number" step="0.01" class="p-1 border rounded w-28"/></td>
-              <td class="py-2"><input v-model.number="row.eur" type="number" step="0.01" class="p-1 border rounded w-28"/></td>
+              <td class="py-2">
+                <input v-model.number="row.kzt" type="number" step="0.01" class="p-1 border rounded w-28" />
+              </td>
+              <td class="py-2">
+                <input v-model.number="row.usd" type="number" step="0.01" class="p-1 border rounded w-28" />
+              </td>
+              <td class="py-2">
+                <input v-model.number="row.eur" type="number" step="0.01" class="p-1 border rounded w-28" />
+              </td>
               <td class="py-2">
                 <div v-if="hasAnyAmount(row)">
-                  <div v-if="row.kzt !== null && row.kzt !== undefined">KZT → {{ formatRub(convertToRub(row.kzt, 'KZT')) }} / с {{ percent }}% → {{ formatRub(convertToRubWithPercent(row.kzt, 'KZT')) }}</div>
-                  <div v-if="row.usd !== null && row.usd !== undefined">USD → {{ formatRub(convertToRub(row.usd, 'USD')) }} / с {{ percent }}% → {{ formatRub(convertToRubWithPercent(row.usd, 'USD')) }}</div>
-                  <div v-if="row.eur !== null && row.eur !== undefined">EUR → {{ formatRub(convertToRub(row.eur, 'EUR')) }} / с {{ percent }}% → {{ formatRub(convertToRubWithPercent(row.eur, 'EUR')) }}</div>
+                  <div v-if="isFilled(row.kzt)">
+                    KZT → {{ formatMoney(toRub(row.kzt, 'KZT'), 'RUB') }}
+                    / с {{ percent }}% → {{ formatMoney(withPercent(toRub(row.kzt, 'KZT')), 'RUB') }}
+                  </div>
+                  <div v-if="isFilled(row.usd)">
+                    USD → {{ formatMoney(toRub(row.usd, 'USD'), 'RUB') }}
+                    / с {{ percent }}% → {{ formatMoney(withPercent(toRub(row.usd, 'USD')), 'RUB') }}
+                  </div>
+                  <div v-if="isFilled(row.eur)">
+                    EUR → {{ formatMoney(toRub(row.eur, 'EUR'), 'RUB') }}
+                    / с {{ percent }}% → {{ formatMoney(withPercent(toRub(row.eur, 'EUR')), 'RUB') }}
+                  </div>
                 </div>
                 <div v-else class="text-gray-500">Введите суммы в колонках</div>
               </td>
@@ -80,16 +131,16 @@
           <tfoot class="border-t">
             <tr class="bg-gray-50">
               <td class="py-2 font-medium">Сумма</td>
-              <td class="py-2"><input :value="sumKzt" readonly class="p-1 border rounded w-28 bg-white" /></td>
-              <td class="py-2"><input :value="sumUsd" readonly class="p-1 border rounded w-28 bg-white" /></td>
-              <td class="py-2"><input :value="sumEur" readonly class="p-1 border rounded w-28 bg-white" /></td>
+              <td class="py-2"><input :value="sumKzt.toFixed(2)" readonly class="p-1 border rounded w-28 bg-white" /></td>
+              <td class="py-2"><input :value="sumUsd.toFixed(2)" readonly class="p-1 border rounded w-28 bg-white" /></td>
+              <td class="py-2"><input :value="sumEur.toFixed(2)" readonly class="p-1 border rounded w-28 bg-white" /></td>
               <td class="py-2 text-sm text-gray-600">
                 <div class="text-xs">Всего RUB:</div>
-                <div class="font-medium">{{ sumRubDisplay }}</div>
-                <div class="text-xs mt-1">С %: {{ sumRubWithPercentDisplay }}</div>
+                <div class="font-medium">{{ formatMoney(sumRub, 'RUB') }}</div>
+                <div class="text-xs mt-1">С %: {{ formatMoney(sumRubWithPercent, 'RUB') }}</div>
                 <div class="text-xs mt-1 border-t pt-1">С поправкой:</div>
-                <div class="font-medium">{{ sumRubWithSurchargeDisplay }}</div>
-                <div class="text-xs mt-1">С % + поправка: {{ sumRubWithPercentAndSurchargeDisplay }}</div>
+                <div class="font-medium">{{ formatMoney(sumRubWithSurcharge, 'RUB') }}</div>
+                <div class="text-xs mt-1">С % + поправка: {{ formatMoney(sumRubWithPercentAndSurcharge, 'RUB') }}</div>
               </td>
             </tr>
           </tfoot>
@@ -98,198 +149,196 @@
 
       <div class="p-3 text-sm text-gray-700 border rounded">
         <div class="mb-2 font-medium">Информация о наблюдаемой комиссии</div>
-        <div class="mb-1">На основе двух примеров (89.99 EUR → 106.9 USD и 78 EUR → 92.65 USD) автоматически вычислена поправка (multiplier): <strong>{{ multiplierDisplay }}</strong></div>
-        <div class="text-xs text-gray-600">Применяется к расчёту RUB чтобы учесть разницу между теоретическим обменом через KGS и фактически списанной суммой.</div>
+        <div class="mb-1">
+          По примерам 89.99 EUR → 106.9 USD и 78 EUR → 92.65 USD поправка:
+          <strong>{{ multiplierDisplay }}</strong>
+        </div>
+        <div class="text-xs text-gray-600">
+          Умножает RUB, чтобы учесть разницу между теоретическим EUR→USD через KGS и фактическим списанием.
+        </div>
       </div>
 
       <div class="text-right">
-        <button @click="reset" class="px-4 py-2 bg-blue-600 text-white rounded">Сброс</button>
+        <button type="button" class="px-4 py-2 bg-blue-600 text-white rounded" @click="reset">
+          Сброс
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
-const amount = ref<number>(50999)
-const currency = ref<'EUR'|'USD'|'KZT'>('KZT')
+type ForeignCurrency = 'EUR' | 'USD' | 'KZT'
 
-const rates = ref({
-  // исходные курсы, можно менять в UI
+type Rates = {
+  rubToKgs: number
+  eurToKgs: number
+  usdToKgs: number
+  kztToKgs: number
+}
+
+type PurchaseRow = {
+  id: number
+  name: string
+  kzt: number | null
+  usd: number | null
+  eur: number | null
+}
+
+const FOREIGN_CURRENCIES: ForeignCurrency[] = ['EUR', 'USD', 'KZT']
+
+const DEFAULT_AMOUNT = 50999
+const DEFAULT_CURRENCY: ForeignCurrency = 'KZT'
+const DEFAULT_PERCENT = 10
+const DEFAULT_RATES: Rates = {
   rubToKgs: 1.02,
   eurToKgs: 97.7,
   usdToKgs: 87.5,
   kztToKgs: 0.205,
-})
+}
 
-// Процентная надбавка (ввод пользователем)
-const percent = ref<number>(10)
-
-// Строки таблицы примеров
-const rows = ref<Array<{ name: string; kzt: number | null; usd: number | null; eur: number | null }>>([
-  { name: 'Epic', kzt: null, usd: null, eur: null },
-  { name: 'Подписка 6 мес.', kzt: null, usd: null, eur: null },
-])
-
-// Примеры из задания
-const examples = [
+const CARD_SURCHARGE_EXAMPLES = [
   { eur: 89.99, chargedUsd: 106.9 },
   { eur: 78, chargedUsd: 92.65 },
 ]
 
+const { setPageSeo } = useSeo()
+setPageSeo('Калькулятор валют | MyApp', 'Расчёт затрат RUB → KGS → EUR/USD/KZT')
+
+let nextRowId = 1
+const createRow = (name: string): PurchaseRow => ({
+  id: nextRowId++,
+  name,
+  kzt: null,
+  usd: null,
+  eur: null,
+})
+
+const defaultRows = (): PurchaseRow[] => [
+  createRow('Epic'),
+  createRow('Подписка 6 мес.'),
+]
+
+const amount = ref(DEFAULT_AMOUNT)
+const currency = ref<ForeignCurrency>(DEFAULT_CURRENCY)
+const percent = ref(DEFAULT_PERCENT)
+const rates = ref<Rates>({ ...DEFAULT_RATES })
+const rows = ref<PurchaseRow[]>(defaultRows())
+
+const rateFor = (code: ForeignCurrency) => {
+  if (code === 'EUR') return rates.value.eurToKgs
+  if (code === 'USD') return rates.value.usdToKgs
+  return rates.value.kztToKgs
+}
+
+const toKgs = (value: number, code: ForeignCurrency) => {
+  if (!Number.isFinite(value) || value < 0) return 0
+  const rate = rateFor(code)
+  if (!rate || rate <= 0) return 0
+  return value * rate
+}
+
+const toRub = (value: number | null | undefined, code: ForeignCurrency) => {
+  if (!isFilled(value)) return Number.NaN
+  const rubRate = rates.value.rubToKgs
+  if (!rubRate || rubRate <= 0) return Number.NaN
+  return toKgs(value, code) / rubRate
+}
+
+const withPercent = (rub: number) => {
+  if (!Number.isFinite(rub)) return Number.NaN
+  return rub * (1 + (percent.value || 0) / 100)
+}
+
+const withSurcharge = (rub: number) => {
+  if (!Number.isFinite(rub)) return Number.NaN
+  return rub * multiplier.value
+}
+
+const isFilled = (value: unknown): value is number => {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+const hasAnyAmount = (row: PurchaseRow) => {
+  return isFilled(row.kzt) || isFilled(row.usd) || isFilled(row.eur)
+}
+
+const rowRub = (row: PurchaseRow, applyPercent = false) => {
+  const parts = [
+    toRub(row.kzt, 'KZT'),
+    toRub(row.usd, 'USD'),
+    toRub(row.eur, 'EUR'),
+  ]
+  const base = parts.reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0)
+  return applyPercent ? withPercent(base) : base
+}
+
+const formatMoney = (value: number, suffix: string) => {
+  if (!Number.isFinite(value)) return '-'
+  return `${Number(value.toFixed(2)).toLocaleString()} ${suffix}`
+}
+
 const multiplier = computed(() => {
-  // для каждого примера вычисляем теоретический USD (через KGS)
-  const ratios = examples.map(ex => {
-    const computedUsd = (ex.eur * rates.value.eurToKgs) / rates.value.usdToKgs
-    return ex.chargedUsd / computedUsd
+  const ratios = CARD_SURCHARGE_EXAMPLES.map((example) => {
+    const theoreticalUsd = toKgs(example.eur, 'EUR') / rateFor('USD')
+    if (!theoreticalUsd) return 1
+    return example.chargedUsd / theoreticalUsd
   })
-  // средняя поправка
-  const avg = ratios.reduce((s, v) => s + v, 0) / ratios.length
+  const avg = ratios.reduce((sum, value) => sum + value, 0) / ratios.length
   return avg || 1
 })
 
-/** KGS для суммы в USD/EUR: кросс через KZT (Бакай продажа USD/EUR и продажа KZT), затем KZT→KGS. */
-function kgsFromForeignToKgs(amt: number, foreignToKgs: number): number {
-  const kzt = rates.value.kztToKgs
-  if (!kzt || kzt <= 0) return 0
-  const kztPerUnit = foreignToKgs / kzt
-  return amt * kztPerUnit * kzt
-}
-
-const kgsNeeded = computed(() => {
-  const amt = amount.value
-  const r = rates.value
-  switch (currency.value) {
-    case 'KZT':
-      return amt * r.kztToKgs
-    case 'USD':
-      return kgsFromForeignToKgs(amt, r.usdToKgs)
-    case 'EUR':
-      return kgsFromForeignToKgs(amt, r.eurToKgs)
-    default:
-      return 0
-  }
-})
-
+const kgsNeeded = computed(() => toKgs(Number(amount.value) || 0, currency.value))
 const rubNeeded = computed(() => {
-  return kgsNeeded.value / rates.value.rubToKgs
+  const rubRate = rates.value.rubToKgs
+  if (!rubRate || rubRate <= 0) return 0
+  return kgsNeeded.value / rubRate
+})
+const rubNeededWithSurcharge = computed(() => withSurcharge(rubNeeded.value))
+const rubNeededWithPercent = computed(() => withPercent(rubNeeded.value))
+const multiplierDisplay = computed(() => {
+  const extraPercent = (multiplier.value - 1) * 100
+  return `${multiplier.value.toFixed(4)} (${extraPercent.toFixed(2)}%)`
 })
 
-const rubNeededWithSurcharge = computed(() => {
-  return rubNeeded.value * multiplier.value
-})
-
-const rubNeededWithPercent = computed(() => {
-  return rubNeeded.value * (1 + (percent.value || 0) / 100)
-})
-
-function reset() {
-  amount.value = 50999
-  currency.value = 'KZT'
-  percent.value = 6
-  rates.value = { rubToKgs: 1.075, eurToKgs: 102.0, usdToKgs: 87.5, kztToKgs: 0.2 }
-  rows.value = [ { name: 'Epic', kzt: null, usd: null, eur: null }, { name: 'Подписка 6 мес.', kzt: null, usd: null, eur: null } ]
-}
-function addRow() {
-  const idx = rows.value.length + 1
-  rows.value.push({ name: `Пример ${idx}`, kzt: null, usd: null, eur: null })
+const sumBy = (field: 'kzt' | 'usd' | 'eur') => {
+  return rows.value.reduce((sum, row) => sum + (Number(row[field]) || 0), 0)
 }
 
-function removeRow(i: number) {
-  if (i >= 0 && i < rows.value.length) rows.value.splice(i, 1)
+const sumKzt = computed(() => sumBy('kzt'))
+const sumUsd = computed(() => sumBy('usd'))
+const sumEur = computed(() => sumBy('eur'))
+const sumRub = computed(() => rows.value.reduce((sum, row) => sum + rowRub(row), 0))
+const sumRubWithPercent = computed(() => rows.value.reduce((sum, row) => sum + rowRub(row, true), 0))
+const sumRubWithSurcharge = computed(() => sumRub.value * multiplier.value)
+const sumRubWithPercentAndSurcharge = computed(() => sumRubWithPercent.value * multiplier.value)
+
+const addRow = () => {
+  rows.value.push(createRow(`Пример ${rows.value.length + 1}`))
 }
 
-const sumRub = computed(() => {
-  return rows.value.reduce((s, r) => {
-    const a = convertToRub(r.kzt, 'KZT')
-    const b = convertToRub(r.usd, 'USD')
-    const c = convertToRub(r.eur, 'EUR')
-    return s + (isNaN(a) ? 0 : a) + (isNaN(b) ? 0 : b) + (isNaN(c) ? 0 : c)
-  }, 0)
-})
-
-const sumRubWithPercent = computed(() => {
-  return rows.value.reduce((s, r) => {
-    const a = convertToRubWithPercent(r.kzt, 'KZT')
-    const b = convertToRubWithPercent(r.usd, 'USD')
-    const c = convertToRubWithPercent(r.eur, 'EUR')
-    return s + (isNaN(a) ? 0 : a) + (isNaN(b) ? 0 : b) + (isNaN(c) ? 0 : c)
-  }, 0)
-})
-
-const sumRubWithSurcharge = computed(() => {
-  return rows.value.reduce((s, r) => {
-    const a = convertToRub(r.kzt, 'KZT')
-    const b = convertToRub(r.usd, 'USD')
-    const c = convertToRub(r.eur, 'EUR')
-    const base = (isNaN(a) ? 0 : a) + (isNaN(b) ? 0 : b) + (isNaN(c) ? 0 : c)
-    return s + base * multiplier.value
-  }, 0)
-})
-
-const sumRubWithPercentAndSurcharge = computed(() => {
-  return rows.value.reduce((s, r) => {
-    const a = convertToRubWithPercent(r.kzt, 'KZT')
-    const b = convertToRubWithPercent(r.usd, 'USD')
-    const c = convertToRubWithPercent(r.eur, 'EUR')
-    const base = (isNaN(a) ? 0 : a) + (isNaN(b) ? 0 : b) + (isNaN(c) ? 0 : c)
-    return s + base * multiplier.value
-  }, 0)
-})
-
-const sumRubDisplay = computed(() => formatRub(sumRub.value))
-const sumRubWithPercentDisplay = computed(() => formatRub(sumRubWithPercent.value))
-const sumRubWithSurchargeDisplay = computed(() => formatRub(sumRubWithSurcharge.value))
-const sumRubWithPercentAndSurchargeDisplay = computed(() => formatRub(sumRubWithPercentAndSurcharge.value))
-
-const sumKzt = computed(() => {
-  return rows.value.reduce((s, r) => s + (Number(r.kzt) || 0), 0).toFixed(2)
-})
-const sumUsd = computed(() => {
-  return rows.value.reduce((s, r) => s + (Number(r.usd) || 0), 0).toFixed(2)
-})
-const sumEur = computed(() => {
-  return rows.value.reduce((s, r) => s + (Number(r.eur) || 0), 0).toFixed(2)
-})
-
-// Helpers for table and formatting
-function hasAnyAmount(row: { kzt: number | null; usd: number | null; eur: number | null }) {
-  return (row.kzt || row.kzt === 0) || (row.usd || row.usd === 0) || (row.eur || row.eur === 0)
+const removeRow = (id: number) => {
+  if (rows.value.length <= 1) return
+  rows.value = rows.value.filter((row) => row.id !== id)
 }
 
-function convertToRub(value: number | null | undefined, cur: 'KZT'|'USD'|'EUR') {
-  if (value === null || value === undefined || isNaN(Number(value))) return NaN
-  const v = Number(value)
-  let kgs = 0
-  if (cur === 'KZT') kgs = v * rates.value.kztToKgs
-  if (cur === 'USD') kgs = kgsFromForeignToKgs(v, rates.value.usdToKgs)
-  if (cur === 'EUR') kgs = kgsFromForeignToKgs(v, rates.value.eurToKgs)
-  const rub = kgs / rates.value.rubToKgs
-  return rub
+const reset = () => {
+  amount.value = DEFAULT_AMOUNT
+  currency.value = DEFAULT_CURRENCY
+  percent.value = DEFAULT_PERCENT
+  rates.value = { ...DEFAULT_RATES }
+  nextRowId = 1
+  rows.value = defaultRows()
 }
-
-function convertToRubWithPercent(value: number | null | undefined, cur: 'KZT'|'USD'|'EUR') {
-  const base = convertToRub(value, cur)
-  if (isNaN(base)) return NaN
-  return base * (1 + (percent.value || 0) / 100)
-}
-
-function formatRub(val: number) {
-  if (isNaN(val)) return '-'
-  return Number(val.toFixed(2)).toLocaleString() + ' RUB'
-}
-
-const kgsNeededDisplay = computed(() => kgsNeeded.value.toFixed(2) + ' KGS')
-const rubNeededDisplay = computed(() => Number(rubNeeded.value.toFixed(2)).toLocaleString() + ' RUB')
-const rubNeededWithSurchargeDisplay = computed(() => Number(rubNeededWithSurcharge.value.toFixed(2)).toLocaleString() + ' RUB')
-const rubNeededWithPercentDisplay = computed(() => Number(rubNeededWithPercent.value.toFixed(2)).toLocaleString() + ' RUB')
-const multiplierDisplay = computed(() => multiplier.value.toFixed(4) + ' (' + ((multiplier.value - 1) * 100).toFixed(2) + '%)')
 </script>
 
 <style scoped>
 .calculator {
-    background: #f9f9f9;
+  background: #f9f9f9;
 }
-.input { background: white; }
+.input {
+  background: white;
+}
 </style>
